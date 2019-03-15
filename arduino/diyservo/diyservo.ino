@@ -13,8 +13,8 @@ int pwm1;
 int en1;
 int PINdr1 = 2;
 int PINpwm1 = 4;
-int PINen1 = 1;
-
+int PINen1 = 3;
+//FUbarino Mini PIN 1 is LED_PIN1
 
 void setup() {
   Serial.begin(9600);
@@ -72,11 +72,10 @@ void loop() {
   }
   if (goalPot >= 508 && goalPot <= 516)
   {
-    //digitalWrite(PIN_LED1, HIGH);
+    digitalWrite(PIN_LED1, HIGH);
     stop();
     delay(50);
-    //digitalWrite(PIN_LED1, LOW);
-
+    digitalWrite(PIN_LED1, LOW);
   }
   if (goalPot < 508)
   {
