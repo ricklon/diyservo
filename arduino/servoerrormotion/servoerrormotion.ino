@@ -39,6 +39,8 @@ void move(int cmdPos, int servoPos) {
   }
   speed = diff;
   Serial.println(speed);
+  // if in a max bad place make speed zero 
+  // Allow movement in direction less than the max bad place
   if (servoPos > maxTurnPos)
   {
     // only command to turn away
@@ -50,6 +52,9 @@ void move(int cmdPos, int servoPos) {
     }
     return;
   }
+  
+  // if in a min bad place make speed zero 
+  // Allow movement in direction greater than the min bad place
   if (servoPos < minTurnPos) {
     if ( cmdPos > minTurnPos) {
       digitalWrite(PIN_LED1, LOW);
@@ -59,24 +64,11 @@ void move(int cmdPos, int servoPos) {
     }
     return;
   }
+  //move normally
   digitalWrite(PIN_LED1, LOW);
   digitalWrite(PINen1, 1);
   digitalWrite(PINdr1, dir);
   analogWrite(PINpwm1, speed);
-}
-
-
-void reverse( int speed, int curPos) {
-  if (curPos > minTurnPos) {
-    digitalWrite(PIN_LED1, LOW);
-    digitalWrite(PINen1, 1);
-    digitalWrite(PINdr1, 1);
-    analogWrite(PINpwm1, speed);
-  }
-  else {
-    digitalWrite(PIN_LED1, HIGH);
-    stop();
-  }
 }
 
 void stop() {
