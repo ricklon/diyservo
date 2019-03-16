@@ -40,13 +40,9 @@ void move(int cmdPos, int servoPos) {
 
   speed = diff;
   Serial.println(speed);
-<<<<<<< HEAD
   if (servoPos > maxTurnPos && dir == 0)
-=======
   // if in a max bad place make speed zero 
   // Allow movement in direction less than the max bad place
-  if (servoPos > maxTurnPos)
->>>>>>> f013fc621a08708d3def842c6a42ff4343383fc9
   {
     Serial.print("maxTurnPos Reached: ");
     Serial.print(" dir: ");
@@ -54,44 +50,25 @@ void move(int cmdPos, int servoPos) {
     Serial.print("cmdPos: ");
     Serial.println(cmdPos);
     stop();
-    return;
-  }
-<<<<<<< HEAD
-  if (servoPos < minTurnPos && dir == 1) {
+    
+  } else  if (servoPos < minTurnPos && dir == 1) {
     Serial.print("minTurnPos Reached: ");
     Serial.print(" dir: ");
     Serial.print(dir);
     Serial.print("cmdPos: ");
     Serial.println(cmdPos);
     stop();
-    return;
-  }
+
+  } else
   Serial.println("GO");
-=======
-  
-  // if in a min bad place make speed zero 
-  // Allow movement in direction greater than the min bad place
-  if (servoPos < minTurnPos) {
-    if ( cmdPos > minTurnPos) {
-      digitalWrite(PIN_LED1, LOW);
-      digitalWrite(PINen1, 1);
-      digitalWrite(PINdr1, dir);
-      analogWrite(PINpwm1, speed);
-    }
-    return;
-  }
   //move normally
->>>>>>> f013fc621a08708d3def842c6a42ff4343383fc9
   digitalWrite(PIN_LED1, LOW);
   digitalWrite(PINen1, 1);
   digitalWrite(PINdr1, dir);
   analogWrite(PINpwm1, speed);
 
-<<<<<<< HEAD
 }
 
-=======
->>>>>>> f013fc621a08708d3def842c6a42ff4343383fc9
 void stop() {
   digitalWrite(PINen1, 0);
   digitalWrite(PINdr1, 1);
