@@ -3,6 +3,7 @@ const int cmdPosPin = A9;
 const int posPin = A7;
 const int minTurnPos = 23;
 const int maxTurnPos = 1000;
+const int maxVel = 200;
 
 int cmdPosPot;
 int curPot;
@@ -29,44 +30,29 @@ void move(int cmdPos, int servoPos) {
   int speed;
   int diff = cmdPos - servoPos; // if 0 we're on target
   bool dir = (diff < 0) ? 1 : 0;
-  Serial.println(dir);
 
   diff = abs(diff);
-  int maxVel = 200;
-
   if (diff > maxVel ) {
     diff = maxVel;
   }
-
   speed = diff;
-  Serial.println(speed);
-  if (servoPos > maxTurnPos && dir == 0)
-  // if in a max bad place make speed zero 
+  
+  // if in a max bad place make speed zero
   // Allow movement in direction less than the max bad place
+  if (servoPos > maxTurnPos && dir == 0)
   {
-    Serial.print("maxTurnPos Reached: ");
-    Serial.print(" dir: ");
-    Serial.print(dir);
-    Serial.print("cmdPos: ");
-    Serial.println(cmdPos);
     stop();
-    
   } else  if (servoPos < minTurnPos && dir == 1) {
-    Serial.print("minTurnPos Reached: ");
-    Serial.print(" dir: ");
-    Serial.print(dir);
-    Serial.print("cmdPos: ");
-    Serial.println(cmdPos);
     stop();
+  } else {
+    Serial.println("GO");
+    //move normally
+    digitalWrite(PIN_LED1, LOW);
+    digitalWrite(PINen1, 1);
+    digitalWrite(PINdr1, dir);
+    analogWrite(PINpwm1, speed);
 
-  } else
-  Serial.println("GO");
-  //move normally
-  digitalWrite(PIN_LED1, LOW);
-  digitalWrite(PINen1, 1);
-  digitalWrite(PINdr1, dir);
-  analogWrite(PINpwm1, speed);
-
+  }
 }
 
 void stop() {
@@ -79,6 +65,7 @@ void loop() {
   cmdPosPot = analogRead(cmdPosPin); //where i want to be
   curPot = analogRead(posPin); //where i am
   int error = cmdPosPot - curPot;
+  
   if (abs(error ) > 1 ) {
     move(cmdPosPot, curPot);
   }
