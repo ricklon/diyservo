@@ -28,7 +28,7 @@ void setup() {
 void move(int cmdPos, int servoPos) {
   int speed;
   int diff = cmdPos - servoPos; // if 0 we're on target
-  bool dir = (diff < 0) ? 0 : 1;
+  bool dir = (diff < 0) ? 1 : 0;
   Serial.println(dir);
 
   diff = abs(diff);
@@ -37,46 +37,34 @@ void move(int cmdPos, int servoPos) {
   if (diff > maxVel ) {
     diff = maxVel;
   }
+
   speed = diff;
   Serial.println(speed);
-  if (servoPos > maxTurnPos)
+  if (servoPos > maxTurnPos && dir == 0)
   {
-    // only command to turn away
-    if (cmdPos < maxTurnPos) {
-      digitalWrite(PIN_LED1, LOW);
-      digitalWrite(PINen1, 1);
-      digitalWrite(PINdr1, dir);
-      analogWrite(PINpwm1, speed);
-    }
+    Serial.print("maxTurnPos Reached: ");
+    Serial.print(" dir: ");
+    Serial.print(dir);
+    Serial.print("cmdPos: ");
+    Serial.println(cmdPos);
+    stop();
     return;
   }
-  if (servoPos < minTurnPos) {
-    if ( cmdPos > minTurnPos) {
-      digitalWrite(PIN_LED1, LOW);
-      digitalWrite(PINen1, 1);
-      digitalWrite(PINdr1, dir);
-      analogWrite(PINpwm1, speed);
-    }
+  if (servoPos < minTurnPos && dir == 1) {
+    Serial.print("minTurnPos Reached: ");
+    Serial.print(" dir: ");
+    Serial.print(dir);
+    Serial.print("cmdPos: ");
+    Serial.println(cmdPos);
+    stop();
     return;
   }
+  Serial.println("GO");
   digitalWrite(PIN_LED1, LOW);
   digitalWrite(PINen1, 1);
   digitalWrite(PINdr1, dir);
   analogWrite(PINpwm1, speed);
-}
 
-
-void reverse( int speed, int curPos) {
-  if (curPos > minTurnPos) {
-    digitalWrite(PIN_LED1, LOW);
-    digitalWrite(PINen1, 1);
-    digitalWrite(PINdr1, 1);
-    analogWrite(PINpwm1, speed);
-  }
-  else {
-    digitalWrite(PIN_LED1, HIGH);
-    stop();
-  }
 }
 
 void stop() {
