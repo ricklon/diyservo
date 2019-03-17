@@ -1,8 +1,9 @@
 # DIY Servo
 
-![Servo Wiring](images/wiringexample.jpg?raw=true "Servo wiring")
 
-* Potentiometer contolled motor with rotational limits
+<img src="images/wiringexample.jpg" width="350" alt="Servo Wiring Image">
+
+* Potentiometer controlled motor with rotational limits
 
 * Use a potentiometer to command a servo to a position that matches a potentiometer attached to a motor indication position
 
