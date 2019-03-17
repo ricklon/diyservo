@@ -1,6 +1,6 @@
 # DIY Servo
 
-![Servo Wiring](images/wiringexample.jpg?raw=true "Servo wiring")
+![Servo Wiring](images/wiring.jpg?raw=true "Servo wiring")
 
 * Potentiometer contolled motor with rotational limits
 
