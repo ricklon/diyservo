@@ -133,7 +133,7 @@ void setup() {
 }
 
 void loop() {
-  //curPot = analogRead(posPin); //where i am
+  curPot = analogRead(posPin); //where i am
   unsigned long STR_VAL = pulseRead(0); // Read pulse width of
 
   cmdPosPot = map(STR_VAL, 1000, 2000, 0, 1023);
@@ -157,8 +157,6 @@ void loop() {
   Serial.print(curPot);
   Serial.print(" error: ");
   Serial.println(error);
-
-
 
   delay(250);
 
