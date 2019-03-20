@@ -1,6 +1,6 @@
 /*
-   Servo Signal Generator
-   Uses input capture to decode incoming signal
+  Read RC Signal and move servo
+    Uses input capture to decode incoming signal
    Then generators and output to command the servo to move to position
    for Fubarino Mini
 */
@@ -109,16 +109,16 @@ void setup() {
   //setup input capture modules one and two
   IC1CON = 0;
   IC1CONbits.ICM = 1;   // Capture an interrupt on every rising and falling edge
-  IC1CONbits.ICTMR = 1; // Set to user Timer2
+  IC1CONbits.ICTMR = 0; // Set to user Timer3
   IC1CONbits.ON = 1;    // Turn IC1 on
 
 
   /*We're using timer2 for the input capture. This shouldn't interfere with pwm
     output, which uses timers 3-5.
   */
-  PR2 = 0xFFFF;         // This tells timer 2 to count up to 0xFFFF, after which it will restart at 0
-  T2CONbits.TCKPS = 6;  // 1:64 prescale, which means 48MHz/64 or 0.75MHz clock rate
-  T2CONbits.TON = 1;    // Turn on Timer2
+  PR3 = 0xFFFF;         // This tells timer 3 to count up to 0xFFFF, after which it will restart at 0
+  T3CONbits.TCKPS = 6;  // 1:64 prescale, which means 48MHz/64 or 0.75MHz clock rate
+  T3CONbits.TON = 1;    // Turn on Timer3
 
   pinMode(RC_INPUT_STR, INPUT);
   //pinMode(PIN_LED1, OUTPUT);
