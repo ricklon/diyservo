@@ -1,19 +1,5 @@
-/*
-  Read RC Signal and move servo
-    Uses input capture to decode incoming signal
-   Then generators and output to command the servo to move to position
-   for Fubarino Mini
-*/
 
-
-//These lines are for the input capture for pwm read off RC
-#define RC_INPUT_STR 0
-#define RC_INPUT_COUNT 1
-volatile uint16_t pulseHighTime[RC_INPUT_COUNT];
-volatile uint16_t pulseLowTime[RC_INPUT_COUNT];
-
-
-//const int cmdPosPin = A9;
+const int cmdPosPin = A9;
 const int posPin = A7;
 const int minTurnPos = 23;
 const int maxTurnPos = 1000;
@@ -30,6 +16,13 @@ int PINdr1 = 2;
 int PINpwm1 = 4;
 int PINen1 = 3;
 
+
+
+//These lines are for the input capture for pwm read off RC
+#define RC_INPUT_STR 0
+#define RC_INPUT_COUNT 1
+volatile uint16_t pulseHighTime[RC_INPUT_COUNT];
+volatile uint16_t pulseLowTime[RC_INPUT_COUNT];
 
 
 //This function pulls the data being populated by the input capture interrupts.
@@ -61,6 +54,8 @@ void __USER_ISR InputCaptureSTR_ISR(void) {
 }
 
 
+
+
 void move(int cmdPos, int servoPos) {
   int speed;
   int diff = cmdPos - servoPos; // if 0 we're on target
@@ -85,25 +80,27 @@ void move(int cmdPos, int servoPos) {
     digitalWrite(PIN_LED1, LOW);
     digitalWrite(PINen1, 1);
     digitalWrite(PINdr1, dir);
-    analogWrite(PINpwm1, speed);
+    //  analogWrite(PINpwm1, speed);
 
   }
 }
 
+
 void stop() {
   digitalWrite(PINen1, 0);
   digitalWrite(PINdr1, 1);
-  // analogWrite(PINpwm1, 0);
 }
-
 
 
 void setup() {
   Serial.begin(9600);
+  //pinMode(PIN_LED1, OUTPUT);
+  //digitalWrite(PIN_LED1, LOW);
   pinMode(PINdr1, OUTPUT);
   pinMode(PINen1, OUTPUT);
   stop();
 
+  
   mapPps(0, PPS_IN_IC1);
 
   //setup input capture modules one and two
@@ -129,35 +126,28 @@ void setup() {
   setIntPriority(_INPUT_CAPTURE_1_VECTOR, 4, 0);
   clearIntFlag(_INPUT_CAPTURE_1_IRQ);
   setIntEnable(_INPUT_CAPTURE_1_IRQ);
-
+  
 }
 
+
 void loop() {
+  cmdPosPot = analogRead(cmdPosPin); //where i want to be
   curPot = analogRead(posPin); //where i am
   unsigned long STR_VAL = pulseRead(0); // Read pulse width of
+  int gotoPos = map(STR_VAL, 1000, 2000, 0, 1023);
 
-  cmdPosPot = map(STR_VAL, 1000, 2000, 0, 1023);
-  if (cmdPosPot < 0) {
-    cmdPosPot = 0;
-  }
-  if (cmdPosPot > 1023) {
-    cmdPosPot = 1023;
-  }
-
-  int error = cmdPosPot - curPot;
-
+  int error = gotoPos - curPot;
+  
   if (abs(error ) > 1 ) {
-    move(cmdPosPot, curPot);
+    move(gotoPos, curPot);
   }
   Serial.print("STR_VAL: ");
   Serial.print(STR_VAL);
-  Serial.print(" cmdPosPot: ");
+  Serial.print("cmdPosPot: ");
   Serial.print(cmdPosPot);
   Serial.print(" curPot: ");
   Serial.print(curPot);
   Serial.print(" error: ");
   Serial.println(error);
-
   delay(10);
-
 }
