@@ -17,7 +17,10 @@ volatile uint16_t pulseLowTime[RC_INPUT_COUNT];
 const int posPin = A7;
 const int minTurnPos = 23;
 const int maxTurnPos = 1000;
-const int maxVel = 200;
+const int maxVel = 125;
+const int scale = 90;
+const int rcMax = 1738;
+const int rcMin = 1360;
 
 int cmdPosPot;
 int curPot;
@@ -62,15 +65,17 @@ void __USER_ISR InputCaptureSTR_ISR(void) {
 
 
 void move(int cmdPos, int servoPos) {
-  int speed;
-  int diff = cmdPos - servoPos; // if 0 we're on target
-  bool dir = (diff < 0) ? 1 : 0;
+  int velocity;
+  int error = cmdPos - servoPos; // if 0 we're on target
+  bool dir = (error < 0) ? 1 : 0;
 
-  diff = abs(diff);
-  if (diff > maxVel ) {
-    diff = maxVel;
+  int gain = analogRead(A9)/scale; //scale factor
+
+  error = abs(error);
+  if (error > maxVel ) {
+    error = maxVel;
   }
-  speed = diff;
+  velocity = error ;
 
   // if in a max bad place make speed zero
   // Allow movement in direction less than the max bad place
@@ -85,7 +90,7 @@ void move(int cmdPos, int servoPos) {
     digitalWrite(PIN_LED1, LOW);
     digitalWrite(PINen1, 1);
     digitalWrite(PINdr1, dir);
-    analogWrite(PINpwm1, speed);
+    analogWrite(PINpwm1, velocity-gain);
 
   }
 }
@@ -136,7 +141,7 @@ void loop() {
   curPot = analogRead(posPin); //where i am
   unsigned long STR_VAL = pulseRead(0); // Read pulse width of
 
-  cmdPosPot = map(STR_VAL, 1000, 2000, 0, 1023);
+  cmdPosPot = map(STR_VAL, rcMin, rcMax, 0, 1023);
   if (cmdPosPot < 0) {
     cmdPosPot = 0;
   }
@@ -149,15 +154,24 @@ void loop() {
   if (abs(error ) > 1 ) {
     move(cmdPosPot, curPot);
   }
-  Serial.print("STR_VAL: ");
-  Serial.print(STR_VAL);
-  Serial.print(" cmdPosPot: ");
+  Serial.print(" gain: ");
+  Serial.print(analogRead(A9));
+
+  Serial.print(" scale: ");
+  Serial.print(scale);
+
+  Serial.print(" pwm: ");
+  Serial.print(analogRead(A9)/scale);
+
+  Serial.print(" STR_VAL: ");
+  Serial.println(STR_VAL);
+  Serial.print("cmdPosPot: ");
   Serial.print(cmdPosPot);
   Serial.print(" curPot: ");
   Serial.print(curPot);
   Serial.print(" error: ");
   Serial.println(error);
 
-  delay(10);
+  delay(250);
 
 }
