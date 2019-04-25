@@ -15,15 +15,20 @@ volatile uint16_t pulseLowTime[RC_INPUT_COUNT];
 
 //const int cmdPosPin = A9;
 const int posPin = A7;
+const int gainPin = A9;
+const int scalePin = A10;
+
 const int minTurnPos = 23;
 const int maxTurnPos = 1000;
 const int maxVel = 125;
-const int scale = 90;
 const int rcMax = 1738;
 const int rcMin = 1360;
 
+
 int cmdPosPot;
 int curPot;
+int gGain;
+int gScale = 90;
 
 int pwmVal;
 int dr1;
@@ -69,7 +74,7 @@ void move(int cmdPos, int servoPos) {
   int error = cmdPos - servoPos; // if 0 we're on target
   bool dir = (error < 0) ? 1 : 0;
 
-  int gain = analogRead(A9)/scale; //scale factor
+  int gain = gGain/gScale; //scale factor
 
   error = abs(error);
   if (error > maxVel ) {
@@ -85,7 +90,8 @@ void move(int cmdPos, int servoPos) {
   } else  if (servoPos < minTurnPos && dir == 1) {
     stop();
   } else {
-    Serial.println("GO");
+    Serial.print("GO: ");
+    Serial.println(velocity-gain);
     //move normally
     digitalWrite(PIN_LED1, LOW);
     digitalWrite(PINen1, 1);
@@ -139,6 +145,8 @@ void setup() {
 
 void loop() {
   curPot = analogRead(posPin); //where i am
+  gGain = analogRead(gainPin);
+
   unsigned long STR_VAL = pulseRead(0); // Read pulse width of
 
   cmdPosPot = map(STR_VAL, rcMin, rcMax, 0, 1023);
@@ -155,13 +163,13 @@ void loop() {
     move(cmdPosPot, curPot);
   }
   Serial.print(" gain: ");
-  Serial.print(analogRead(A9));
+  Serial.print(gGain);
 
   Serial.print(" scale: ");
-  Serial.print(scale);
+  Serial.print(gScale);
 
   Serial.print(" pwm: ");
-  Serial.print(analogRead(A9)/scale);
+  Serial.print(gGain/gScale);
 
   Serial.print(" STR_VAL: ");
   Serial.println(STR_VAL);
