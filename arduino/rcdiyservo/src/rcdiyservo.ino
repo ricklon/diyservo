@@ -27,6 +27,7 @@ const int rcMin = 1360;
 
 int cmdPosPot;
 int curPot;
+int offSet;
 int gGain;
 int gScale = 90;
 
@@ -146,8 +147,15 @@ void setup() {
 void loop() {
   curPot = analogRead(posPin); //where i am
   gGain = analogRead(gainPin);
+  offSet = analogRead(scalePin) - 512;
+  curPot = curPot + offSet;
+  //TODO: Add a offset to the steering.
+  
 
   unsigned long STR_VAL = pulseRead(0); // Read pulse width of
+
+  //When the RC controller is off it goes to a max value.
+  //What should the safety value be when controller is off?
 
   cmdPosPot = map(STR_VAL, rcMin, rcMax, 0, 1023);
   if (cmdPosPot < 0) {
@@ -167,6 +175,9 @@ void loop() {
 
   Serial.print(" scale: ");
   Serial.print(gScale);
+
+  Serial.print(" offset: ");
+  Serial.print(offSet);
 
   Serial.print(" pwm: ");
   Serial.print(gGain/gScale);
