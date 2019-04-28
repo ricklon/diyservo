@@ -21,15 +21,20 @@ const int scalePin = A10;
 const int minTurnPos = 23;
 const int maxTurnPos = 1000;
 const int maxVel = 125;
-const int rcMax = 1738;
-const int rcMin = 1360;
+//const int rcMax = 1738;
+//const int rcMin = 1360;
+const int deadband=30;
+const int maxError=500;
 
+const int GainDivisor=205;
 
 int cmdPosPot;
 int curPot;
 int offSet;
 int gGain;
-int gScale = 90;
+int gScale = 20;
+
+int binsize;
 
 int pwmVal;
 int dr1;
@@ -75,13 +80,18 @@ void move(int cmdPos, int servoPos) {
   int error = cmdPos - servoPos; // if 0 we're on target
   bool dir = (error < 0) ? 1 : 0;
 
-  int gain = gGain/gScale; //scale factor
-
+  
   error = abs(error);
-  if (error > maxVel ) {
-    error = maxVel;
+  if (error > maxError) {
+    error = maxError;
   }
-  velocity = error ;
+  if(error<deadband){
+    error=deadband;
+  }
+  velocity= gGain*(1+(error-deadband)/binsize)/GainDivisor; //scale factor
+
+  velocity=(velocity>maxVel)?maxVel:velocity;
+
 
   // if in a max bad place make speed zero
   // Allow movement in direction less than the max bad place
@@ -92,12 +102,12 @@ void move(int cmdPos, int servoPos) {
     stop();
   } else {
     Serial.print("GO: ");
-    Serial.println(velocity-gain);
+    Serial.println(velocity);
     //move normally
     digitalWrite(PIN_LED1, LOW);
     digitalWrite(PINen1, 1);
     digitalWrite(PINdr1, dir);
-    analogWrite(PINpwm1, velocity-gain);
+    analogWrite(PINpwm1, velocity);
 
   }
 }
@@ -142,11 +152,13 @@ void setup() {
   clearIntFlag(_INPUT_CAPTURE_1_IRQ);
   setIntEnable(_INPUT_CAPTURE_1_IRQ);
 
+  binsize=(maxVel-deadband)/gScale;
 }
 
 void loop() {
   curPot = analogRead(posPin); //where i am
   gGain = analogRead(gainPin);
+  
   offSet = analogRead(scalePin) - 512;
   curPot = curPot + offSet;
   //TODO: Add a offset to the steering.
@@ -157,7 +169,12 @@ void loop() {
   //When the RC controller is off it goes to a max value.
   //What should the safety value be when controller is off?
 
-  cmdPosPot = map(STR_VAL, rcMin, rcMax, 0, 1023);
+  int str_clip=STR_VAL;
+  //str_clip=(str_clip<rcMin)?rcMin:str_clip;
+  //str_clip=(str_clip>rcMax)?rcMax:str_clip;
+  int rcMin=900;
+  int rcMax=2100;
+  cmdPosPot = map(str_clip, rcMin, rcMax, 0, 1023);
   if (cmdPosPot < 0) {
     cmdPosPot = 0;
   }
@@ -167,7 +184,7 @@ void loop() {
 
   int error = cmdPosPot - curPot;
 
-  if (abs(error ) > 1 ) {
+  if (abs(error ) > deadband ) {
     move(cmdPosPot, curPot);
   }
   Serial.print(" gain: ");
@@ -178,9 +195,6 @@ void loop() {
 
   Serial.print(" offset: ");
   Serial.print(offSet);
-
-  Serial.print(" pwm: ");
-  Serial.print(gGain/gScale);
 
   Serial.print(" STR_VAL: ");
   Serial.println(STR_VAL);
