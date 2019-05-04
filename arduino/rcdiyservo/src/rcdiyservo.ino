@@ -7,7 +7,7 @@
 
 
 //These lines are for the input capture for pwm read off RC
-#define RC_INPUT_STR 0
+#define RC_INPUT_STR_PIN 0
 #define RC_INPUT_COUNT 1
 volatile uint16_t pulseHighTime[RC_INPUT_COUNT];
 volatile uint16_t pulseLowTime[RC_INPUT_COUNT];
@@ -17,6 +17,7 @@ volatile uint16_t pulseLowTime[RC_INPUT_COUNT];
 const int posPin = A7;
 const int gainPin = A9;
 const int scalePin = A10;
+const int offsetPin = A11;
 
 const int minTurnPos = 23;
 const int maxTurnPos = 1000;
@@ -40,9 +41,9 @@ int pwmVal;
 int dr1;
 int pwm1;
 int en1;
-int PINdr1 = 2;
-int PINpwm1 = 4;
-int PINen1 = 3;
+const int PINdr1 = 2;
+const int PINpwm1 = 4;
+const int PINen1 = 3;
 
 
 
@@ -61,7 +62,7 @@ void __USER_ISR InputCaptureSTR_ISR(void) {
   clearIntFlag(_INPUT_CAPTURE_1_IRQ);
   if (IC1CONbits.ICBNE == 1)
   {
-    if (digitalRead(RC_INPUT_STR) == HIGH)
+    if (digitalRead(RC_INPUT_STR_PIN) == HIGH)
     {
       risingEdgeTime = IC1BUF;
       pulseLowTime[0] = risingEdgeTime - fallingEdgeTime;
@@ -142,7 +143,7 @@ void setup() {
   T3CONbits.TCKPS = 6;  // 1:64 prescale, which means 48MHz/64 or 0.75MHz clock rate
   T3CONbits.TON = 1;    // Turn on Timer3
 
-  pinMode(RC_INPUT_STR, INPUT);
+  pinMode(RC_INPUT_STR_PIN, INPUT);
   //pinMode(PIN_LED1, OUTPUT);
   //digitalWrite(PIN_LED1, LOW);
 
@@ -159,7 +160,7 @@ void loop() {
   curPot = analogRead(posPin); //where i am
   gGain = analogRead(gainPin);
   
-  offSet = analogRead(scalePin) - 512;
+  offSet = analogRead(offsetPin) - 512;
   curPot = curPot + offSet;
   //TODO: Add a offset to the steering.
   
