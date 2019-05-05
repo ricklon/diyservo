@@ -15,9 +15,9 @@ volatile uint16_t pulseLowTime[RC_INPUT_COUNT];
 
 //const int cmdPosPin = A9;
 const int posPin = A7;
-const int gainPin = A9;
-const int scalePin = A10;
-const int offsetPin = A11;
+const int gainPin = A8;
+const int scalePin = A9;
+const int offsetPin = A10;
 
 const int minTurnPos = 23;
 const int maxTurnPos = 1000;
@@ -159,7 +159,7 @@ void setup() {
 void loop() {
   curPot = analogRead(posPin); //where i am
   gGain = analogRead(gainPin);
-  
+  gScale = analogRead(scalePin);  
   offSet = analogRead(offsetPin) - 512;
   curPot = curPot + offSet;
   //TODO: Add a offset to the steering.
