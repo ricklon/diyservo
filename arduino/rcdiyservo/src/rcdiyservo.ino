@@ -4,6 +4,7 @@
    Then generators and output to command the servo to move to position
    for Fubarino Mini
 */
+#include <Arduino.h>
 
 
 //These lines are for the input capture for pwm read off RC
@@ -22,12 +23,15 @@ const int offsetPin = A10;
 const int minTurnPos = 23;
 const int maxTurnPos = 1000;
 const int maxVel = 125;
-//const int rcMax = 1738;
-//const int rcMin = 1360;
 const int deadband=30;
 const int maxError=500;
 
 const int GainDivisor=205;
+
+//servo control range. outside of this is considered bad data
+int rcMax = 2100;
+int rcMin =  900;
+
 
 int cmdPosPot;
 int curPot;
@@ -80,7 +84,8 @@ void move(int cmdPos, int servoPos) {
   int velocity;
   int error = cmdPos - servoPos; // if 0 we're on target
   bool dir = (error < 0) ? 1 : 0;
-
+  Serial.print("dir: ");
+  Serial.println(dir);
   
   error = abs(error);
   if (error > maxError) {
@@ -96,10 +101,12 @@ void move(int cmdPos, int servoPos) {
 
   // if in a max bad place make speed zero
   // Allow movement in direction less than the max bad place
-  if (servoPos > maxTurnPos && dir == 0)
+  if ((servoPos > maxTurnPos) && (cmdPos>servoPos))
   {
+    Serial.print("1111111111");
     stop();
-  } else  if (servoPos < minTurnPos && dir == 1) {
+  } else  if ((servoPos < minTurnPos) && (cmdPos<servoPos)) {
+    Serial.print("1111111111");
     stop();
   } else {
     Serial.print("GO: ");
@@ -107,7 +114,7 @@ void move(int cmdPos, int servoPos) {
     //move normally
     digitalWrite(PIN_LED1, LOW);
     digitalWrite(PINen1, 1);
-    digitalWrite(PINdr1, dir);
+    digitalWrite(PINdr1, 1-dir);
     analogWrite(PINpwm1, velocity);
 
   }
@@ -161,9 +168,7 @@ void loop() {
   gGain = analogRead(gainPin);
   gScale = analogRead(scalePin);  
   offSet = analogRead(offsetPin) - 512;
-  curPot = curPot + offSet;
-  //TODO: Add a offset to the steering.
-  
+
 
   unsigned long STR_VAL = pulseRead(0); // Read pulse width of
 
@@ -171,10 +176,15 @@ void loop() {
   //What should the safety value be when controller is off?
 
   int str_clip=STR_VAL;
-  //str_clip=(str_clip<rcMin)?rcMin:str_clip;
-  //str_clip=(str_clip>rcMax)?rcMax:str_clip;
-  int rcMin=900;
-  int rcMax=2100;
+  int curPotOffSet = curPot + offSet;  
+
+  // Don't narrow the rc signal but narrow the interpretation of where to go.
+  int safeLOW = 1300;
+  int safeHIGH = 1700;
+
+  if (STR_VAL > rcMax || STR_VAL < rcMin) {
+    str_clip=1500;
+  }
   cmdPosPot = map(str_clip, rcMin, rcMax, 0, 1023);
   if (cmdPosPot < 0) {
     cmdPosPot = 0;
@@ -183,10 +193,10 @@ void loop() {
     cmdPosPot = 1023;
   }
 
-  int error = cmdPosPot - curPot;
+  int error = cmdPosPot - curPotOffSet;
 
   if (abs(error ) > deadband ) {
-    move(cmdPosPot, curPot);
+    move(cmdPosPot, curPotOffSet);
   }
   Serial.print(" gain: ");
   Serial.print(gGain);
