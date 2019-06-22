@@ -22,7 +22,7 @@ const int offsetPin = A10;
 
 const int midPotVal=480;
 const int leftPotLimit=365;
-const int rightPotLimit=695;
+const int rightPotLimit=595;
 
 const int timeStep=250;
 
@@ -48,6 +48,7 @@ struct {
   int previous_potValue;
   int command;
   int output_value;
+  int output_unclipped;
   bool output_dir;
   bool error_deadband;
   bool out_of_bounds;
@@ -97,19 +98,20 @@ void __USER_ISR InputCaptureSTR_ISR(void) {
 void move() {
   state.previous_error=state.current_error;
   state.current_error = state.command-state.potValue; // if 0 we're on target
-  state.output_dir = (error < 0) ? 1 : 0;
   
-  error = abs(error);
+  //state.current_error = abs(current_error);
   
-  if(error<deadband){
+  if(abs(state.current_error)<deadband){
     state.error_deadband=1;
     return;
   }
-  state.error_deadband=0;
-  state.output_value= PD_vars.K*error-((PD_vars.Kd*(state.potValue-state.previous_potValue))>>7);//dividing the kd value by 128
+  state.output_value= (PD_vars.K*state.current_error)>>3-((PD_vars.Kd*(state.potValue-state.previous_potValue))>>7);//dividing the kd value by 128
 	//so we avoid fp 
 
+  state.output_unclipped=state.output_value;
   state.output_value=(state.output_value>maxVel)?maxVel:state.output_value;
+  state.output_value=(state.output_value<-maxVel)?-maxVel:state.output_value;
+  state.output_dir = (state.output_value< 0) ? 1 : 0;
 
 
   // if in a max bad place make speed zero
@@ -125,8 +127,7 @@ void move() {
     digitalWrite(PIN_LED1, LOW);
     digitalWrite(PINen1, 1);
     digitalWrite(PINdr1, 1-state.output_dir);
-    analogWrite(PINpwm1, state.output_value);
-    state.out_of_bounds=0;
+    analogWrite(PINpwm1, abs(state.output_value));
 
   }
 }
@@ -159,7 +160,13 @@ void print_status(){
   Serial.print(state.current_error);
 
   Serial.print(" previous error: ");
-  Serial.println(state.previous_error);
+  Serial.print(state.previous_error);
+
+  Serial.print(" input_diff: ");
+  Serial.println(state.potValue-state.previous_potValue);
+
+  Serial.print(" output unclipped: ");
+  Serial.print(state.output_unclipped);
 
   Serial.print(" output value: ");
   Serial.print(state.output_value);
@@ -178,6 +185,9 @@ void print_status(){
   if(state.stop){
   	Serial.println("stopped");
   }
+  Serial.println("--------------");
+  Serial.println();
+  
 }
 
 void setup() {
@@ -212,6 +222,7 @@ void setup() {
   clearIntFlag(_INPUT_CAPTURE_1_IRQ);
   setIntEnable(_INPUT_CAPTURE_1_IRQ);
 
+
 }
 
 void loop() {
@@ -220,7 +231,7 @@ void loop() {
   PD_vars.K = analogRead(gainPin);
   PD_vars.Kd = analogRead(scalePin)*Kd_scaler;
 
-  unsigned long state.rcInput= pulseRead(0); // Read pulse width of
+  state.rcInput= pulseRead(0); // Read pulse width of
 
   //When the RC controller is off it goes to a max value.
   //What should the safety value be when controller is off?
@@ -233,13 +244,14 @@ void loop() {
   state.rcInput=(state.rcInput>2000)?2000:state.rcInput;
   state.rcInput=(state.rcInput<1000)?1000:state.rcInput;
 	
-  state.command = map(str_clip, 1000, 2000, leftPotLimit, rightPotLimit);
+  state.command = map(state.rcInput, 1000, 2000, leftPotLimit, rightPotLimit);
  
   state.error_deadband=0;
   state.out_of_bounds=0;
   state.stop=0;
 
-  move()
+  move();
+  print_status();
   delay(timeStep);
 
 }
