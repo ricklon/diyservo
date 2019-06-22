@@ -20,6 +20,14 @@ const int gainPin = A8;
 const int scalePin = A9;
 const int offsetPin = A10;
 
+const int midPotVal=480;
+const int leftPotLimit=365;
+const int rightPotLimit=695;
+
+const int timeStep=250;
+
+const int Kd_scaler=1000/timeStep;
+
 const int minTurnPos = 23;
 const int maxTurnPos = 1000;
 const int maxVel = 125;
@@ -32,19 +40,25 @@ const int GainDivisor=205;
 int rcMax = 2100;
 int rcMin =  900;
 
+struct {
+  int potValue;
+  int rcInput;
+  int current_error;
+  int previous_error;
+  int previous_potValue;
+  int command;
+  int output_value;
+  bool output_dir;
+  bool error_deadband;
+  bool out_of_bounds;
+  bool stop;
+} state;
 
-int cmdPosPot;
-int curPot;
-int offSet;
-int gGain;
-int gScale = 20;
+struct {
+  int K;
+  int Kd;
+} PD_vars;
 
-int binsize;
-
-int pwmVal;
-int dr1;
-int pwm1;
-int en1;
 const int PINdr1 = 2;
 const int PINpwm1 = 4;
 const int PINen1 = 3;
@@ -80,42 +94,39 @@ void __USER_ISR InputCaptureSTR_ISR(void) {
 }
 
 
-void move(int cmdPos, int servoPos) {
-  int velocity;
-  int error = cmdPos - servoPos; // if 0 we're on target
-  bool dir = (error < 0) ? 1 : 0;
-  Serial.print("dir: ");
-  Serial.println(dir);
+void move() {
+  state.previous_error=state.current_error;
+  state.current_error = state.command-state.potValue; // if 0 we're on target
+  state.output_dir = (error < 0) ? 1 : 0;
   
   error = abs(error);
-  if (error > maxError) {
-    error = maxError;
-  }
+  
   if(error<deadband){
-    error=deadband;
+    state.error_deadband=1;
+    return;
   }
-  velocity= gGain*(1+(error-deadband)/binsize)/GainDivisor; //scale factor
+  state.error_deadband=0;
+  state.output_value= PD_vars.K*error-((PD_vars.Kd*(state.potValue-state.previous_potValue))>>7);//dividing the kd value by 128
+	//so we avoid fp 
 
-  velocity=(velocity>maxVel)?maxVel:velocity;
+  state.output_value=(state.output_value>maxVel)?maxVel:state.output_value;
 
 
   // if in a max bad place make speed zero
   // Allow movement in direction less than the max bad place
-  if ((servoPos > maxTurnPos) && (cmdPos>servoPos))
+  if ((state.potValue>rightPotLimit) && (state.command>state.potValue))
   {
-    Serial.print("1111111111");
+    state.out_of_bounds=1;
     stop();
-  } else  if ((servoPos < minTurnPos) && (cmdPos<servoPos)) {
-    Serial.print("1111111111");
+  } else  if ((state.potValue<leftPotLimit) && (state.command<state.potValue)) {
     stop();
+    state.out_of_bounds=1;
   } else {
-    Serial.print("GO: ");
-    Serial.println(velocity);
-    //move normally
     digitalWrite(PIN_LED1, LOW);
     digitalWrite(PINen1, 1);
-    digitalWrite(PINdr1, 1-dir);
-    analogWrite(PINpwm1, velocity);
+    digitalWrite(PINdr1, 1-state.output_dir);
+    analogWrite(PINpwm1, state.output_value);
+    state.out_of_bounds=0;
 
   }
 }
@@ -126,7 +137,48 @@ void stop() {
   // analogWrite(PINpwm1, 0);
 }
 
+void print_status(){
 
+  Serial.println("KVariables:");
+  Serial.print("\tK: ");
+  Serial.println(PD_vars.K);
+  Serial.print("\tKd: ");
+  Serial.println(PD_vars.Kd);
+  Serial.println();
+
+  Serial.print(" potvalue: ");
+  Serial.print(state.potValue);
+
+  Serial.print(" RC Input: ");
+  Serial.print(state.rcInput);
+
+  Serial.print(" command: ");
+  Serial.println(state.command);
+
+  Serial.print(" error: ");
+  Serial.print(state.current_error);
+
+  Serial.print(" previous error: ");
+  Serial.println(state.previous_error);
+
+  Serial.print(" output value: ");
+  Serial.print(state.output_value);
+
+  Serial.print(" output direction: ");
+  Serial.println(state.output_dir);
+  
+  if(state.error_deadband){
+  	Serial.println("Error within deadband");
+  }
+
+  if(state.out_of_bounds){
+  	Serial.println("out of bounds");
+  }
+
+  if(state.stop){
+  	Serial.println("stopped");
+  }
+}
 
 void setup() {
   Serial.begin(9600);
@@ -160,62 +212,34 @@ void setup() {
   clearIntFlag(_INPUT_CAPTURE_1_IRQ);
   setIntEnable(_INPUT_CAPTURE_1_IRQ);
 
-  binsize=(maxVel-deadband)/gScale;
 }
 
 void loop() {
-  curPot = analogRead(posPin); //where i am
-  gGain = analogRead(gainPin);
-  gScale = analogRead(scalePin);  
-  offSet = analogRead(offsetPin) - 512;
+  state.previous_potValue =state.potValue;
+  state.potValue = analogRead(posPin); 
+  PD_vars.K = analogRead(gainPin);
+  PD_vars.Kd = analogRead(scalePin)*Kd_scaler;
 
-
-  unsigned long STR_VAL = pulseRead(0); // Read pulse width of
+  unsigned long state.rcInput= pulseRead(0); // Read pulse width of
 
   //When the RC controller is off it goes to a max value.
   //What should the safety value be when controller is off?
 
-  int str_clip=STR_VAL;
-  int curPotOffSet = curPot + offSet;  
-
   // Don't narrow the rc signal but narrow the interpretation of where to go.
-  int safeLOW = 1300;
-  int safeHIGH = 1700;
 
-  if (STR_VAL > rcMax || STR_VAL < rcMin) {
-    str_clip=1500;
+  if (state.rcInput> rcMax || state.rcInput< rcMin) {
+    state.rcInput=1500;
   }
-  cmdPosPot = map(str_clip, rcMin, rcMax, 0, 1023);
-  if (cmdPosPot < 0) {
-    cmdPosPot = 0;
-  }
-  if (cmdPosPot > 1023) {
-    cmdPosPot = 1023;
-  }
+  state.rcInput=(state.rcInput>2000)?2000:state.rcInput;
+  state.rcInput=(state.rcInput<1000)?1000:state.rcInput;
+	
+  state.command = map(str_clip, 1000, 2000, leftPotLimit, rightPotLimit);
+ 
+  state.error_deadband=0;
+  state.out_of_bounds=0;
+  state.stop=0;
 
-  int error = cmdPosPot - curPotOffSet;
-
-  if (abs(error ) > deadband ) {
-    move(cmdPosPot, curPotOffSet);
-  }
-  Serial.print(" gain: ");
-  Serial.print(gGain);
-
-  Serial.print(" scale: ");
-  Serial.print(gScale);
-
-  Serial.print(" offset: ");
-  Serial.print(offSet);
-
-  Serial.print(" STR_VAL: ");
-  Serial.println(STR_VAL);
-  Serial.print("cmdPosPot: ");
-  Serial.print(cmdPosPot);
-  Serial.print(" curPot: ");
-  Serial.print(curPot);
-  Serial.print(" error: ");
-  Serial.println(error);
-
-  delay(250);
+  move()
+  delay(timeStep);
 
 }
