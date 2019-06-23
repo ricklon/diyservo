@@ -21,17 +21,17 @@ const int scalePin = A9;
 const int offsetPin = A10;
 
 const int midPotVal=480;
-const int leftPotLimit=365;
-const int rightPotLimit=595;
+const int leftPotLimit=345;
+const int rightPotLimit=615;
 
-const int timeStep=250;
+const int timeStep=100;
 
 const int Kd_scaler=1000/timeStep;
 
 const int minTurnPos = 23;
 const int maxTurnPos = 1000;
 const int maxVel = 125;
-const int deadband=30;
+const int deadband=20;
 const int maxError=500;
 
 const int GainDivisor=205;
@@ -102,12 +102,14 @@ void move() {
   //state.current_error = abs(current_error);
   
   if(abs(state.current_error)<deadband){
+    stop();
     state.error_deadband=1;
     return;
   }
-  state.output_value= (PD_vars.K*state.current_error)>>3-((PD_vars.Kd*(state.potValue-state.previous_potValue))>>7);//dividing the kd value by 128
+  long d_term=(PD_vars.Kd*(state.potValue-state.previous_potValue));
+  //state.output_value= (PD_vars.K*state.current_error)>>7+(d_term>>10);//dividing the kd value by 128
 	//so we avoid fp 
-
+  state.output_value= (PD_vars.K*state.current_error)>>7;//+(d_term>>10);//dividing the kd value by 128
   state.output_unclipped=state.output_value;
   state.output_value=(state.output_value>maxVel)?maxVel:state.output_value;
   state.output_value=(state.output_value<-maxVel)?-maxVel:state.output_value;
@@ -241,10 +243,10 @@ void loop() {
   if (state.rcInput> rcMax || state.rcInput< rcMin) {
     state.rcInput=1500;
   }
-  state.rcInput=(state.rcInput>2000)?2000:state.rcInput;
+  state.rcInput=(state.rcInput>1980)?1980:state.rcInput;
   state.rcInput=(state.rcInput<1000)?1000:state.rcInput;
 	
-  state.command = map(state.rcInput, 1000, 2000, leftPotLimit, rightPotLimit);
+  state.command = map(state.rcInput, 1000, 1980, leftPotLimit, rightPotLimit);
  
   state.error_deadband=0;
   state.out_of_bounds=0;
